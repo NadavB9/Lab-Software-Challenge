@@ -28,7 +28,7 @@ services_table = Table(
     "services",
     metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
-    Column("name", String(255), nullable=False),
+    Column("name", String(255), nullable=False, unique=True),
     Column("host", String(255), nullable=False),
     Column("port", Integer, nullable=False),
     Column("status", String(20), nullable=False, server_default="unknown"),
@@ -52,7 +52,9 @@ def init_engine(
 
     if backend == "postgres":
         if not all([db_name, user, password, host, port]):
-            raise ValueError("db_name, user, password, host and port are required for postgres")
+            raise ValueError(
+                "db_name, user, password, host and port are required for postgres"
+            )
         url = URL.create(
             "postgresql+psycopg",
             username=user,
