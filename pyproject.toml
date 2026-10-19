@@ -6,11 +6,13 @@ readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "fastapi[standard]>=0.143.3",
+    "psycopg>=3.3.6",
     "pydantic-settings>=2.16.0",
+    "sqlalchemy>=2.1.5",
 ]
 
-[project.scripts]
-lab-software-challenge = "lab_software_challenge:main"
+[tool.fastapi]
+entrypoint = "src.main:app"
 
 [dependency-groups]
 dev = [

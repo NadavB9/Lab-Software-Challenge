@@ -1,21 +1,20 @@
-from uuid import UUID, uuid4
+from datetime import datetime
 
-from pydantic import BaseModel, Field, IPvAnyAddress
+from pydantic import BaseModel, Field
 
 
 class ServiceIn(BaseModel):
-    name: str = Field(min_length=1)
-    host: IPvAnyAddress = Field(min_length=1)
+    name: str = Field(min_length=1, max_length=255)
+    host: str = Field(min_length=1, max_length=255)
     port: int = Field(ge=1, le=65535)
 
 
-class ServiceOut(ServiceIn):
-    id: UUID
+class Service(ServiceIn):
+    id: int
+    status: str
+    last_checked: datetime | None = None
+    response_time_ms: float | None = None
 
 
 class AddServicesRequest(BaseModel):
     services: list[ServiceIn] = Field(min_length=1)
-
-
-class AddServicesResponse(BaseModel):
-    services: list[ServiceOut]
