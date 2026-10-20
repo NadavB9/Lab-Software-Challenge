@@ -6,7 +6,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 ServiceStatus = Literal["unknown", "up", "down"]
-MonitorType = Literal["tcp", "http", "ssh", "dns"]
+MonitorType = Literal["tcp", "http", "https", "ssh", "dns"]
 
 _HOSTNAME_RE = re.compile(
     r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))*$"

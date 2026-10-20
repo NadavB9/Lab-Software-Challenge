@@ -2,7 +2,7 @@ import logging
 
 from .base import MonitorResult, ProtocolMonitor, Status, down
 from .dns_monitor import monitor_dns
-from .http_monitor import monitor_http
+from .http_monitor import monitor_http, monitor_https
 from .ssh_monitor import monitor_ssh
 from .tcp_monitor import monitor_tcp
 
@@ -12,6 +12,7 @@ log = logging.getLogger(__name__)
 MONITORS: dict[str, ProtocolMonitor] = {
     "tcp": monitor_tcp,
     "http": monitor_http,
+    "https": monitor_https,
     "ssh": monitor_ssh,
     "dns": monitor_dns,
 }
