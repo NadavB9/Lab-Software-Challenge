@@ -1,4 +1,7 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
@@ -7,7 +10,10 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from sqlalchemy.exc import IntegrityError
 
 from .models import AddServicesRequest, Service
+from .monitors import run_monitor
 from .service_repository import ServiceRepository, create_services_table, init_engine
+
+log = logging.getLogger(__name__)
 
 
 class Settings(BaseSettings):
@@ -19,6 +25,8 @@ class Settings(BaseSettings):
     db_password: SecretStr = SecretStr("")
     db_host: str = "localhost"
     db_port: int = 5432
+
+    monitor_timeout_seconds: float = 3.0
 
 
 settings = Settings()
@@ -36,8 +44,10 @@ async def lifespan(app: FastAPI):
     )
     table = create_services_table(engine)
     app.state.repo = ServiceRepository(engine, table)
-    yield
-    engine.dispose()
+    try:
+        yield
+    finally:
+        engine.dispose()
 
 
 app = FastAPI(title="Service Registry", lifespan=lifespan)
@@ -85,3 +95,48 @@ def get_service(service_id: int, repo: RepoDep):
 def delete_service(service_id: int, repo: RepoDep):
     if not repo.delete(service_id):
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Service not found")
+
+
+@app.post("/services/{service_id}/check", response_model=Service)
+async def check_service(service_id: int, repo: RepoDep):
+    svc = await asyncio.to_thread(repo.get, service_id)
+    if svc is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Service not found")
+
+    result = await run_monitor(
+        svc["monitor_type"], svc["host"], svc["port"], settings.monitor_timeout_seconds
+    )
+    monitored_at = datetime.now(UTC)
+
+    if result.status == "down":
+        log.warning(
+            "Service %s (%s %s:%s) down: %s",
+            svc["name"],
+            svc["monitor_type"],
+            svc["host"],
+            svc["port"],
+            result.error,
+        )
+
+    try:
+        await asyncio.to_thread(
+            repo.update_monitor_result,
+            service_id,
+            result.status,
+            monitored_at,
+            result.response_time_ms,
+            result.error,
+            result.details,
+        )
+    except Exception:
+        # still return the result even if saving it failed
+        log.exception("Failed to save monitor result for service %s", service_id)
+
+    return {
+        **svc,
+        "status": result.status,
+        "last_monitored": monitored_at,
+        "response_time_ms": result.response_time_ms,
+        "error": result.error,
+        "details": result.details,
+    }
