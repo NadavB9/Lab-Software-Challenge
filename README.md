@@ -1,4 +1,4 @@
-# A simple fastapi based service manager
+# A simple FastAPI based service manager
 
 ## Getting Started
 Before Starting, you need [uv](https://docs.astral.sh/uv/getting-started/installation/)
@@ -6,7 +6,7 @@ Before Starting, you need [uv](https://docs.astral.sh/uv/getting-started/install
 To run with the default settings:
 ```bash
 cp .env.example .env # Copy the default env file
-uv run fastapi run # Run FastAPI ( uv will auto-install the dependencies)
+uv run fastapi run # Run FastAPI (uv will auto-install the dependencies)
 ```
 
 ## Configuration
@@ -16,12 +16,12 @@ By default, the server will run with an sqlite db located at `./services.db`, yo
 
 ```sh
 # Create 3 services
-curl.exe -X POST http://localhost:8000/services `
+curl -X POST http://localhost:8000/services `
   -H "Content-Type: application/json" `
   -d '{
     "services": [
       { "name": "Example", "host": "example.com", "port": 80, "monitor_type": "http" },
-      { "name": "GitHub SSH",     "host": "github.com",     "port": 22,  "monitor_type": "ssh" }
+      { "name": "GitHub SSH", "host": "github.com", "port": 22, "monitor_type": "ssh" }
     ]
   }'
   
@@ -31,5 +31,6 @@ curl -X DELETE localhost:8000/services/1
 # Get the services
 curl localhost:8000/services
 
-curl.exe -X POST http://localhost:8000/services/2/check
+# check status
+curl -X POST http://localhost:8000/services/2/check
 ```
