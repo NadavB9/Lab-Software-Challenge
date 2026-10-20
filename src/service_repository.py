@@ -1,8 +1,10 @@
 from collections.abc import Iterable, Mapping
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from sqlalchemy import (
+    JSON,
     CheckConstraint,
     Column,
     DateTime,
@@ -12,11 +14,11 @@ from sqlalchemy import (
     MetaData,
     String,
     Table,
-    UniqueConstraint,
     create_engine,
     delete,
     insert,
     select,
+    update,
 )
 from sqlalchemy.engine import URL
 
@@ -31,10 +33,12 @@ services_table = Table(
     Column("name", String(255), nullable=False, unique=True),
     Column("host", String(255), nullable=False),
     Column("port", Integer, nullable=False),
+    Column("monitor_type", String(10), nullable=False, server_default="tcp"),
     Column("status", String(20), nullable=False, server_default="unknown"),
-    Column("last_checked", DateTime(timezone=True), nullable=True),
+    Column("last_monitored", DateTime(timezone=True), nullable=True),
     Column("response_time_ms", Float, nullable=True),
-    UniqueConstraint("host", "port", name="uq_services_host_port"),
+    Column("error", String(500), nullable=True),
+    Column("details", JSON, nullable=True),
     CheckConstraint("port BETWEEN 1 AND 65535", name="ck_services_port_range"),
 )
 
@@ -101,5 +105,28 @@ class ServiceRepository:
 
     def delete(self, service_id: int) -> bool:
         stmt = delete(self.table).where(self.table.c.id == service_id)
+        with self.engine.begin() as conn:
+            return conn.execute(stmt).rowcount > 0
+
+    def update_monitor_result(
+        self,
+        service_id: int,
+        status: str,
+        last_monitored: datetime,
+        response_time_ms: float | None,
+        error: str | None,
+        details: dict[str, Any] | None,
+    ) -> bool:
+        stmt = (
+            update(self.table)
+            .where(self.table.c.id == service_id)
+            .values(
+                status=status,
+                last_monitored=last_monitored,
+                response_time_ms=response_time_ms,
+                error=error[:500] if error else None,
+                details=details,
+            )
+        )
         with self.engine.begin() as conn:
             return conn.execute(stmt).rowcount > 0
